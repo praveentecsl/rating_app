@@ -133,10 +133,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   const Text(
                     'Rate and improve university services',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.white70),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -162,22 +159,14 @@ class HomeScreen extends StatelessWidget {
                         '${_services.length}',
                         'Services',
                       ),
-                      Container(
-                        width: 1,
-                        height: 40,
-                        color: Colors.grey[300],
-                      ),
+                      Container(width: 1, height: 40, color: Colors.grey[300]),
                       _buildStatItem(
                         context,
                         Icons.rate_review,
                         '30+',
                         'Aspects',
                       ),
-                      Container(
-                        width: 1,
-                        height: 40,
-                        color: Colors.grey[300],
-                      ),
+                      Container(width: 1, height: 40, color: Colors.grey[300]),
                       _buildStatItem(
                         context,
                         Icons.people,
@@ -216,21 +205,19 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Tap any service to rate its aspects',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 16),
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.85,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.85,
+                        ),
                     itemCount: _services.length,
                     itemBuilder: (context, index) {
                       final serviceData = _services[index];
@@ -261,7 +248,9 @@ class HomeScreen extends StatelessWidget {
                                 end: Alignment.bottomRight,
                                 colors: [
                                   Colors.white,
-                                  Theme.of(context).primaryColor.withOpacity(0.05),
+                                  Theme.of(
+                                    context,
+                                  ).primaryColor.withOpacity(0.05),
                                 ],
                               ),
                             ),
@@ -272,9 +261,9 @@ class HomeScreen extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .primaryColor
-                                        .withOpacity(0.1),
+                                    color: Theme.of(
+                                      context,
+                                    ).primaryColor.withOpacity(0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
@@ -362,11 +351,7 @@ class HomeScreen extends StatelessWidget {
   ) {
     return Column(
       children: [
-        Icon(
-          icon,
-          color: Theme.of(context).primaryColor,
-          size: 32,
-        ),
+        Icon(icon, color: Theme.of(context).primaryColor, size: 32),
         const SizedBox(height: 8),
         Text(
           value,
@@ -376,13 +361,7 @@ class HomeScreen extends StatelessWidget {
             color: Theme.of(context).primaryColor,
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
     );
   }
