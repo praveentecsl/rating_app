@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../db/database_helper.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -32,29 +31,34 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    try {
-      final user = await DatabaseHelper.instance.authenticateUser(
-        _universityIdController.text.trim(),
-        _passwordController.text,
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    // Demo credentials check
+    final universityId = _universityIdController.text.trim();
+    final password = _passwordController.text;
+
+    bool isValid = false;
+
+    // Check against demo credentials
+    if ((universityId == 'S2020001' && password == 'password123') ||
+        (universityId == 'ST2020001' && password == 'password123') ||
+        (universityId == 'ADMIN001' && password == 'admin123')) {
+      isValid = true;
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (isValid) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
-
-      if (!mounted) return;
-
-      if (user != null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      } else {
-        _showErrorDialog('Invalid university ID or password');
-      }
-    } catch (e) {
-      _showErrorDialog('An error occurred: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    } else {
+      _showErrorDialog('Invalid university ID or password.\nPlease use the demo credentials shown below.');
     }
   }
 
