@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
 import 'db/database_helper.dart';
-import 'screens/home_screen.dart';
+import 'screens/landing_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -36,7 +36,7 @@ class AppInitializer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Skip database - go directly to home
-    return const HomeScreen();
+    // Show landing page first
+    return const LandingScreen();
   }
 }
