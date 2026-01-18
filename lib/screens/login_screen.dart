@@ -58,7 +58,9 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     } else {
-      _showErrorDialog('Invalid university ID or password.\nPlease use the demo credentials shown below.');
+      _showErrorDialog(
+        'Invalid university ID or password.\nPlease use the demo credentials shown below.',
+      );
     }
   }
 
