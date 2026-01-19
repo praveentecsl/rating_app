@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -265,14 +264,6 @@ class LandingScreen extends StatelessWidget {
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.7),
                             fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Service Rating Portal for st',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 11,
                           ),
                         ),
                       ],
