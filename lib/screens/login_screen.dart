@@ -267,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(fontSize: 12),
                             ),
                             const Text(
-                              'Admin: ADMIN001 / admin123',
+                              'Admin ninja: ADMIN001 / admin123',
                               style: TextStyle(fontSize: 12),
                             ),
                           ],
