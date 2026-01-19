@@ -13,7 +13,7 @@ class ServiceDetailScreen extends StatefulWidget {
 }
 
 class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
-  final Map<int, double> _ratings = {}; // subserviceId -> rating value
+  final Map<String, double> _ratings = {}; // criteriaName -> rating value
   bool _isSaving = false;
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final AuthService _authService = AuthService();
@@ -258,7 +258,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     if (serviceData != null) {
       final subServices = serviceData['subServices'] as List;
       for (var subService in subServices) {
-        _ratings[subService['id']] = 5.0; // Default rating is 5
+        _ratings[subService['name']] = 5.0; // Default rating is 5
       }
     }
   }
@@ -649,20 +649,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final serviceData = _servicesData[widget.serviceId];
-
-    if (serviceData == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Service Not Found')),
-        body: const Center(child: Text('Service not found')),
-      );
-    }
-
-    final serviceName = serviceData['serviceName'] as String;
-    final description = serviceData['description'] as String;
-    final subServices = serviceData['subServices'] as List;
+    final subServices =
+        serviceData?['subServices'] as List<Map<String, dynamic>>? ?? [];
 
     return Scaffold(
-      appBar: AppBar(title: Text(serviceName)),
+      appBar: AppBar(title: Text(serviceData?['serviceName'] ?? 'Service')),
       body: Column(
         children: [
           // Service Header
@@ -681,7 +672,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  serviceName,
+                  serviceData?['serviceName'] ?? '',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -690,7 +681,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  description,
+                  serviceData?['description'] ?? '',
                   style: const TextStyle(fontSize: 16, color: Colors.white70),
                 ),
               ],
@@ -722,18 +713,17 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             ),
           ),
 
-          // Sub-services list with sliders
+          // Sub-services/criteria list
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: subServices.length,
               itemBuilder: (context, index) {
                 final subService = subServices[index];
-                final subserviceId = subService['id'] as int;
-                final subserviceName = subService['name'] as String;
-                final subserviceDescription =
+                final subServiceName = subService['name'] as String;
+                final subServiceDescription =
                     subService['description'] as String;
-                final currentRating = _ratings[subserviceId] ?? 5.0;
+                final currentRating = _ratings[subServiceName] ?? 5.0;
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -745,7 +735,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       children: [
                         // Sub-service name
                         Text(
-                          subserviceName,
+                          subServiceName,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -756,7 +746,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 4, bottom: 8),
                           child: Text(
-                            subserviceDescription,
+                            subServiceDescription,
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -825,7 +815,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                             label: currentRating.toStringAsFixed(1),
                             onChanged: (value) {
                               setState(() {
-                                _ratings[subserviceId] = value;
+                                _ratings[subServiceName] = value;
                               });
                             },
                           ),
@@ -889,28 +879,82 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: _isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : const Text(
-                        'Submit Ratings',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
               ),
+              onChanged: (value) {
+                _comment = value;
+              },
             ),
           ),
+
+          const SizedBox(height: 20),
         ],
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          onPressed: _isSaving ? null : _submitRating,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+          ),
+          child: _isSaving
+              ? const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                )
+              : const Text('Submit Rating'),
+        ),
+      ),
+    );
+  }
+
+  Color _getRatingColor(double rating) {
+    if (rating >= 8) return Colors.green;
+    if (rating >= 6) return Colors.lightGreen;
+    if (rating >= 4) return Colors.orange;
+    if (rating >= 2) return Colors.deepOrange;
+    return Colors.red;
+  }
+
+  String _getRatingLabel(double rating) {
+    if (rating >= 9) return 'Excellent';
+    if (rating >= 7) return 'Good';
+    if (rating >= 5) return 'Average';
+    if (rating >= 3) return 'Below Average';
+    return 'Poor';
+  }
+}
+
+// A simple RatingBar widget, you might need to add a dependency like `flutter_rating_bar`
+// For now, a placeholder is used to avoid breaking the code.
+// Please add `flutter_rating_bar: ^4.0.1` to your pubspec.yaml
+class RatingBar {
+  static builder({
+    double initialRating = 0.0,
+    double minRating = 1.0,
+    Axis direction = Axis.horizontal,
+    bool allowHalfRating = false,
+    int itemCount = 5,
+    EdgeInsets itemPadding = EdgeInsets.zero,
+    required Widget Function(BuildContext, int) itemBuilder,
+    required void Function(double) onRatingUpdate,
+  }) {
+    return Container(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(itemCount, (index) {
+          return IconButton(
+            onPressed: () {
+              onRatingUpdate(index + 1.0);
+            },
+            icon: Icon(
+              Icons.star,
+              color: initialRating > index ? Colors.amber : Colors.grey,
+            ),
+            padding: itemPadding,
+          );
+        }),
       ),
     );
   }
