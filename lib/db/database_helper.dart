@@ -129,6 +129,42 @@ class DatabaseHelper {
     return null;
   }
 
+  Future<User?> getUserByUniversityId(String universityId) async {
+    final db = await database;
+    final results = await db.query(
+      'Users',
+      where: 'university_id = ?',
+      whereArgs: [universityId],
+    );
+
+    if (results.isNotEmpty) {
+      return User.fromMap(results.first);
+    }
+    return null;
+  }
+
+  Future<int> insertOrUpdateUser(User user) async {
+    final db = await database;
+    final existing = await getUserByUniversityId(user.universityId);
+    
+    if (existing != null) {
+      // Update existing user
+      await db.update(
+        'Users',
+        {
+          'name': user.name,
+          'role': user.role,
+        },
+        where: 'user_id = ?',
+        whereArgs: [existing.userId],
+      );
+      return existing.userId!;
+    } else {
+      // Insert new user
+      return await db.insert('Users', user.toMap());
+    }
+  }
+
   // Service operations
   Future<int> insertService(Service service) async {
     final db = await database;

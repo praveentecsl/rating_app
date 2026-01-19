@@ -264,22 +264,33 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   }
 
   Future<void> _saveAllRatings() async {
-    final user = await _authService.getCurrentUserData();
-    if (user == null || user.userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please log in to submit ratings'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
-    });
-
     try {
+      final user = await _authService.getCurrentUserData();
+      print('DEBUG: User from getCurrentUserData: $user');
+      print('DEBUG: User ID: ${user?.userId}');
+      print('DEBUG: User University ID: ${user?.universityId}');
+      
+      if (user == null || user.userId == null) {
+        print('DEBUG: User or userId is null');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                user == null 
+                  ? 'Please log in to submit ratings' 
+                  : 'User data error. Please try logging out and in again.'
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() {
+        _isSaving = true;
+      });
+
       // Save all ratings to database
       for (var entry in _ratings.entries) {
         final subserviceId = entry.key;
@@ -316,6 +327,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         }
       }
     } catch (e) {
+      print('DEBUG: Error saving ratings: $e');
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -867,7 +879,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isSaving ? null : _saveAllRatings,
+                onPressed: _isSaving ? null : () {
+                  print('DEBUG: Submit button pressed');
+                  _saveAllRatings();
+                },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

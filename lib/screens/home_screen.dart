@@ -6,6 +6,7 @@ import 'user_profile_screen.dart';
 import 'admin_monitoring_screen.dart';
 import '../services/auth_service.dart';
 import '../services/rating_service.dart';
+import '../models/user.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,10 +20,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<int, Map<String, dynamic>> _serviceRatings = {};
   List<Map<String, dynamic>> _trendingServices = [];
   bool _isLoadingRatings = true;
+  User? _currentUser;
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     // Initialize RatingService after widget is built to avoid Firebase timing issues
     Future.microtask(() {
       if (mounted) {
@@ -32,6 +36,20 @@ class _HomeScreenState extends State<HomeScreen> {
         _loadServiceRatings();
       }
     });
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = await _authService.getCurrentUserData();
+      print('DEBUG HomeScreen: User loaded - ${user?.name}, userId: ${user?.userId}');
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+        });
+      }
+    } catch (e) {
+      print('DEBUG HomeScreen: Error loading user - $e');
+    }
   }
 
   Future<void> _loadServiceRatings() async {
@@ -148,8 +166,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = AuthService();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('University of Ruhuna'),
@@ -157,39 +173,41 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         actions: [
           // Show monitoring button only for admin users
-          FutureBuilder(
-            future: authService.getCurrentUserData(),
-            builder: (context, snapshot) {
-              if (snapshot.hasData && snapshot.data?.role == 'admin') {
-                return IconButton(
-                  icon: const Icon(Icons.dashboard),
-                  tooltip: 'Monitoring Dashboard',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AdminMonitoringScreen(),
-                      ),
-                    );
-                  },
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.account_circle),
-            tooltip: 'My Profile',
-            onPressed: () async {
-              final user = await authService.getCurrentUserData();
-              if (user != null && context.mounted) {
+          if (_currentUser?.role == 'admin')
+            IconButton(
+              icon: const Icon(Icons.dashboard),
+              tooltip: 'Monitoring Dashboard',
+              onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => UserProfileScreen(user: user),
+                    builder: (context) => const AdminMonitoringScreen(),
                   ),
                 );
+              },
+            ),
+          IconButton(
+            icon: const Icon(Icons.account_circle),
+            tooltip: 'My Profile',
+            onPressed: () {
+              print('DEBUG: Profile button clicked, user: ${_currentUser?.name}');
+              if (_currentUser == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Loading user data... Please try again'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+                _loadUserData(); // Try loading again
+                return;
               }
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserProfileScreen(user: _currentUser!),
+                ),
+              );
             },
           ),
           IconButton(
@@ -216,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
 
               if (shouldLogout == true && context.mounted) {
-                await authService.signOut();
+                await _authService.signOut();
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const LoginScreen()),
                   (route) => false,
