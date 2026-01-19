@@ -10,7 +10,7 @@ class ServiceDetailScreen extends StatefulWidget {
 }
 
 class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
-  Map<int, double> _ratings = {}; // subserviceId -> rating value
+  final Map<int, double> _ratings = {}; // subserviceId -> rating value
   bool _isSaving = false;
 
   // Hardcoded services and sub-services data
