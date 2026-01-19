@@ -84,7 +84,7 @@ class LandingScreen extends StatelessWidget {
                       ),
                     ),
                     child: const Text(
-                      'UNIVERSITY OF RUHUNA',
+                      'UNIVERSITY OFa RUHUNA',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -239,7 +239,7 @@ class LandingScreen extends StatelessWidget {
                               Icon(Icons.login, size: 24),
                               SizedBox(width: 12),
                               Text(
-                                'Login vishal',
+                                'Login sulitha 1122',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
