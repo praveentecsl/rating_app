@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart' as app_models;
+import '../db/database_helper.dart';
 
 class AuthService {
   final firebase_auth.FirebaseAuth _firebaseAuth = firebase_auth.FirebaseAuth.instance;
@@ -8,6 +9,13 @@ class AuthService {
 
   // Get current user
   firebase_auth.User? get currentUser => _firebaseAuth.currentUser;
+
+  // Get current user data from Firestore
+  Future<app_models.User?> getCurrentUserData() async {
+    final firebaseUser = _firebaseAuth.currentUser;
+    if (firebaseUser == null) return null;
+    return await getUserData(firebaseUser.uid);
+  }
 
   // Stream of auth state changes
   Stream<firebase_auth.User?> get authStateChanges => _firebaseAuth.authStateChanges();
@@ -112,15 +120,31 @@ class AuthService {
     }
   }
 
-  // Get user data from Firestore
+  // Get user data from Firestore and sync with local database
   Future<app_models.User?> getUserData(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
       
       if (doc.exists) {
         final data = doc.data()!;
+        final universityId = data['universityId'] ?? '';
+        
+        // Create user object from Firestore data
+        final firestoreUser = app_models.User(
+          universityId: universityId,
+          name: data['name'] ?? '',
+          role: data['role'] ?? '',
+          password: 'firebase_auth', // Placeholder for Firebase users
+        );
+        
+        // Sync with local database and get user with userId
+        final dbHelper = DatabaseHelper.instance;
+        final localUserId = await dbHelper.insertOrUpdateUser(firestoreUser);
+        
+        // Return user with local database ID
         return app_models.User(
-          universityId: data['universityId'] ?? '',
+          userId: localUserId,
+          universityId: universityId,
           name: data['name'] ?? '',
           role: data['role'] ?? '',
           password: '', // Don't store password in the app
@@ -128,6 +152,7 @@ class AuthService {
       }
       return null;
     } catch (e) {
+      print('Error getting user data: $e');
       return null;
     }
   }

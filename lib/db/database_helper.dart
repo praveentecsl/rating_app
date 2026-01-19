@@ -129,6 +129,42 @@ class DatabaseHelper {
     return null;
   }
 
+  Future<User?> getUserByUniversityId(String universityId) async {
+    final db = await database;
+    final results = await db.query(
+      'Users',
+      where: 'university_id = ?',
+      whereArgs: [universityId],
+    );
+
+    if (results.isNotEmpty) {
+      return User.fromMap(results.first);
+    }
+    return null;
+  }
+
+  Future<int> insertOrUpdateUser(User user) async {
+    final db = await database;
+    final existing = await getUserByUniversityId(user.universityId);
+    
+    if (existing != null) {
+      // Update existing user
+      await db.update(
+        'Users',
+        {
+          'name': user.name,
+          'role': user.role,
+        },
+        where: 'user_id = ?',
+        whereArgs: [existing.userId],
+      );
+      return existing.userId!;
+    } else {
+      // Insert new user
+      return await db.insert('Users', user.toMap());
+    }
+  }
+
   // Service operations
   Future<int> insertService(Service service) async {
     final db = await database;
@@ -575,6 +611,143 @@ class DatabaseHelper {
   }
 
   // Close database
+  // Get all ratings by a specific user
+  Future<List<Map<String, dynamic>>> getUserRatingsWithDetails(
+    int userId,
+  ) async {
+    final db = await database;
+    final results = await db.rawQuery(
+      '''
+      SELECT 
+        r.rating_id,
+        r.score,
+        r.comment,
+        r.timestamp,
+        ss.subservice_name,
+        s.service_name,
+        s.service_id,
+        ss.subservice_id
+      FROM Ratings r
+      INNER JOIN SubServices ss ON r.subservice_id = ss.subservice_id
+      INNER JOIN Services s ON ss.service_id = s.service_id
+      WHERE r.user_id = ?
+      ORDER BY r.timestamp DESC
+    ''',
+      [userId],
+    );
+
+    return results;
+  }
+
+  // Get user's contribution statistics
+  Future<Map<String, dynamic>> getUserContributionStats(int userId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      '''
+      SELECT 
+        COUNT(*) as total_ratings,
+        AVG(score) as average_score,
+        MIN(score) as min_score,
+        MAX(score) as max_score
+      FROM Ratings
+      WHERE user_id = ?
+    ''',
+      [userId],
+    );
+
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return {
+      'total_ratings': 0,
+      'average_score': 0.0,
+      'min_score': 0,
+      'max_score': 0,
+    };
+  }
+
+  // Get recent rating trends for a service (for monitoring sudden drops)
+  Future<List<Map<String, dynamic>>> getRecentServiceRatingTrend(
+    int serviceId,
+    int daysBack,
+  ) async {
+    final db = await database;
+    final results = await db.rawQuery(
+      '''
+      SELECT 
+        DATE(r.timestamp) as date,
+        AVG(r.score) as average_score,
+        COUNT(*) as rating_count
+      FROM Ratings r
+      INNER JOIN SubServices ss ON r.subservice_id = ss.subservice_id
+      WHERE ss.service_id = ? 
+        AND r.timestamp >= datetime('now', '-$daysBack days')
+      GROUP BY DATE(r.timestamp)
+      ORDER BY date DESC
+    ''',
+      [serviceId],
+    );
+
+    return results;
+  }
+
+  // Detect sudden rating drops (for alert system)
+  Future<List<Map<String, dynamic>>> detectRatingDrops(
+    double dropThreshold,
+    int hoursBack,
+  ) async {
+    final db = await database;
+    final results = await db.rawQuery(
+      '''
+      SELECT 
+        s.service_id,
+        s.service_name,
+        AVG(CASE WHEN r.timestamp >= datetime('now', '-$hoursBack hours') 
+            THEN r.score END) as recent_avg,
+        AVG(CASE WHEN r.timestamp < datetime('now', '-$hoursBack hours') 
+            THEN r.score END) as previous_avg,
+        COUNT(CASE WHEN r.timestamp >= datetime('now', '-$hoursBack hours') 
+            THEN 1 END) as recent_count
+      FROM Services s
+      INNER JOIN SubServices ss ON s.service_id = ss.service_id
+      INNER JOIN Ratings r ON ss.subservice_id = r.subservice_id
+      GROUP BY s.service_id, s.service_name
+      HAVING recent_avg IS NOT NULL 
+        AND previous_avg IS NOT NULL
+        AND (previous_avg - recent_avg) > ?
+        AND recent_count >= 3
+      ORDER BY (previous_avg - recent_avg) DESC
+    ''',
+      [dropThreshold],
+    );
+
+    return results;
+  }
+
+  // Get service rating distribution for a user
+  Future<Map<String, dynamic>> getUserServiceRating(
+    int userId,
+    int serviceId,
+  ) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      '''
+      SELECT 
+        COUNT(*) as ratings_given,
+        AVG(r.score) as user_average
+      FROM Ratings r
+      INNER JOIN SubServices ss ON r.subservice_id = ss.subservice_id
+      WHERE r.user_id = ? AND ss.service_id = ?
+    ''',
+      [userId, serviceId],
+    );
+
+    if (result.isNotEmpty && result.first['ratings_given'] != 0) {
+      return result.first;
+    }
+    return {'ratings_given': 0, 'user_average': null};
+  }
+
   Future<void> close() async {
     final db = await database;
     await db.close();
