@@ -84,7 +84,7 @@ class LandingScreen extends StatelessWidget {
                       ),
                     ),
                     child: const Text(
-                      'UNIVERSITY OF RUHUNA',
+                      'UNIVERSITY OFa RUHUNA',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
