@@ -269,7 +269,7 @@ class LandingScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Service Rating Portal',
+                          'Service Rating Portal for st',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.5),
                             fontSize: 11,
