@@ -195,7 +195,7 @@ class LandingScreen extends StatelessWidget {
                               Icon(Icons.explore, size: 28),
                               SizedBox(width: 12),
                               Text(
-                                'Explore Services',
+                                'Explore Servicesss',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -239,7 +239,7 @@ class LandingScreen extends StatelessWidget {
                               Icon(Icons.login, size: 24),
                               SizedBox(width: 12),
                               Text(
-                                'Login sulitha 1122',
+                                'Login',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
