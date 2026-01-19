@@ -9,6 +9,13 @@ class AuthService {
   // Get current user
   firebase_auth.User? get currentUser => _firebaseAuth.currentUser;
 
+  // Get current user data from Firestore
+  Future<app_models.User?> getCurrentUserData() async {
+    final firebaseUser = _firebaseAuth.currentUser;
+    if (firebaseUser == null) return null;
+    return await getUserData(firebaseUser.uid);
+  }
+
   // Stream of auth state changes
   Stream<firebase_auth.User?> get authStateChanges => _firebaseAuth.authStateChanges();
 

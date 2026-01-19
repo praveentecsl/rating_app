@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'service_detail_screen.dart';
 import 'login_screen.dart';
+import 'user_profile_screen.dart';
+import 'admin_monitoring_screen.dart';
 import '../services/auth_service.dart';
 import '../services/rating_service.dart';
 
@@ -154,6 +156,42 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         elevation: 0,
         actions: [
+          // Show monitoring button only for admin users
+          FutureBuilder(
+            future: authService.getCurrentUserData(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData && snapshot.data?.role == 'admin') {
+                return IconButton(
+                  icon: const Icon(Icons.dashboard),
+                  tooltip: 'Monitoring Dashboard',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminMonitoringScreen(),
+                      ),
+                    );
+                  },
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_circle),
+            tooltip: 'My Profile',
+            onPressed: () async {
+              final user = await authService.getCurrentUserData();
+              if (user != null && context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UserProfileScreen(user: user),
+                  ),
+                );
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
