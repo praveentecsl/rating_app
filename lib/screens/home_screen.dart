@@ -3,9 +3,79 @@ import 'dart:ui';
 import 'service_detail_screen.dart';
 import 'login_screen.dart';
 import '../services/auth_service.dart';
+import '../services/rating_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  RatingService? _ratingService;
+  Map<int, Map<String, dynamic>> _serviceRatings = {};
+  List<Map<String, dynamic>> _trendingServices = [];
+  bool _isLoadingRatings = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize RatingService after widget is built to avoid Firebase timing issues
+    Future.microtask(() {
+      if (mounted) {
+        setState(() {
+          _ratingService = RatingService();
+        });
+        _loadServiceRatings();
+      }
+    });
+  }
+
+  Future<void> _loadServiceRatings() async {
+    if (_ratingService == null) return;
+
+    try {
+      final ratings = <int, Map<String, dynamic>>{};
+
+      for (var service in _services) {
+        final serviceId = service['serviceId'] as int;
+        final stats = await _ratingService!.getServiceRatingStats(serviceId);
+        ratings[serviceId] = stats;
+      }
+
+      // Get trending services (top 3)
+      final allServiceIds = _services
+          .map((s) => s['serviceId'] as int)
+          .toList();
+      final trendingData = await _ratingService!.getTrendingServices(
+        allServiceIds,
+      );
+
+      // Map trending data back to full service info
+      final trending = trendingData.take(3).map((tData) {
+        final service = _services.firstWhere(
+          (s) => s['serviceId'] == tData['serviceId'],
+        );
+        return {...service, ...tData};
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _serviceRatings = ratings;
+          _trendingServices = trending;
+          _isLoadingRatings = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading ratings: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingRatings = false;
+        });
+      }
+    }
+  }
 
   // Hardcoded services list for immediate loading
   static final List<Map<String, dynamic>> _services = [
@@ -77,7 +147,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('University of Ruhuna'),
@@ -227,6 +297,102 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
 
+            // Trending Services Section
+            if (_trendingServices.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.trending_up, color: Colors.amber, size: 28),
+                        SizedBox(width: 8),
+                        Text(
+                          'Trending Services',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...List.generate(_trendingServices.length, (index) {
+                      final service = _trendingServices[index];
+                      final medal = index == 0
+                          ? '🥇'
+                          : (index == 1 ? '🥈' : '🥉');
+                      final stats = _serviceRatings[service['serviceId']];
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.1),
+                            child: Text(
+                              medal,
+                              style: const TextStyle(fontSize: 20),
+                            ),
+                          ),
+                          title: Text(
+                            service['serviceName'],
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(service['description']),
+                          trailing: stats != null
+                              ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
+                                          size: 16,
+                                          color: Colors.amber,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${(stats['percentage'] as double).toStringAsFixed(0)}%',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      '${stats['totalRatings']} ratings',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : null,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ServiceDetailScreen(
+                                  serviceId: service['serviceId'],
+                                ),
+                              ),
+                            ).then((_) => _loadServiceRatings());
+                          },
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+
             // All Services Section
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -285,7 +451,7 @@ class HomeScreen extends StatelessWidget {
                                   serviceId: serviceData['serviceId'],
                                 ),
                               ),
-                            );
+                            ).then((_) => _loadServiceRatings());
                           },
                           child: Stack(
                             children: [
@@ -406,6 +572,11 @@ class HomeScreen extends StatelessWidget {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
+                                    const SizedBox(height: 8),
+                                    // Rating display
+                                    _buildRatingDisplay(
+                                      serviceData['serviceId'],
+                                    ),
                                     const Spacer(),
                                     // Rate button
                                     Container(
@@ -484,6 +655,62 @@ class HomeScreen extends StatelessWidget {
         ),
         Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
+    );
+  }
+
+  Widget _buildRatingDisplay(int serviceId) {
+    if (_isLoadingRatings) {
+      return const SizedBox(
+        height: 20,
+        width: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ),
+      );
+    }
+
+    final stats = _serviceRatings[serviceId];
+    if (stats == null || stats['totalRatings'] == 0) {
+      return const Text(
+        'No ratings yet',
+        style: TextStyle(
+          fontSize: 10,
+          color: Colors.white70,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    final percentage = stats['percentage'] as double;
+    final totalRatings = stats['totalRatings'] as int;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star, size: 12, color: Colors.amber),
+          const SizedBox(width: 4),
+          Text(
+            '${percentage.toStringAsFixed(0)}%',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '($totalRatings)',
+            style: const TextStyle(fontSize: 9, color: Colors.white70),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -17,7 +17,7 @@ void main() async {
       // 1. Go to Firebase Console → Your Project → Project Settings
       // 2. Add a Web App (</> icon)
       // 3. Copy the config values and replace the placeholders below
-      
+
       // Firebase web configuration
       const firebaseOptions = FirebaseOptions(
         apiKey: "AIzaSyD39lbl8OyQAUkudeEsRoIBZV6YGFz8gkU",
@@ -27,7 +27,7 @@ void main() async {
         messagingSenderId: "1050938826630",
         appId: "1:1050938826630:web:e4410ff81ff7d7b7aa5607",
       );
-      
+
       await Firebase.initializeApp(options: firebaseOptions);
       sqflite.databaseFactory = databaseFactoryFfiWeb;
     } else {
