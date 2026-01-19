@@ -131,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'serviceId': 6,
-      'serviceName': 'Accommodation',
+      'serviceName': 'Hostel Facilities',
       'description': 'Hostel facilities',
       'imagePath': 'hostel',
     },
@@ -483,19 +483,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.85,
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio:
+                              0.85, // Further adjusted for shorter cards
                         ),
                     itemCount: _services.length,
                     itemBuilder: (context, index) {
                       final serviceData = _services[index];
 
                       return Card(
-                        elevation: 4,
+                        elevation: 2, // Reduced elevation
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(
+                            12,
+                          ), // Softer corners
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
@@ -543,8 +546,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               Positioned.fill(
                                 child: BackdropFilter(
                                   filter: ImageFilter.blur(
-                                    sigmaX: 2,
-                                    sigmaY: 2,
+                                    sigmaX: 1, // Reduced blur
+                                    sigmaY: 1,
                                   ),
                                   child: Container(
                                     decoration: BoxDecoration(
@@ -552,8 +555,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                         begin: Alignment.topCenter,
                                         end: Alignment.bottomCenter,
                                         colors: [
-                                          Colors.black.withOpacity(0.3),
-                                          Colors.black.withOpacity(0.6),
+                                          Colors.black.withOpacity(0.2),
+                                          Colors.black.withOpacity(0.5),
                                         ],
                                       ),
                                     ),
@@ -563,22 +566,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
                               // Content
                               Padding(
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.all(
+                                  8,
+                                ), // Reduced padding
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     // Service Icon
                                     Container(
-                                      padding: const EdgeInsets.all(16),
+                                      padding: const EdgeInsets.all(
+                                        12,
+                                      ), // Reduced padding
                                       decoration: BoxDecoration(
                                         color: Colors.white.withOpacity(0.9),
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
                                             color: Colors.black.withOpacity(
-                                              0.2,
+                                              0.15,
                                             ),
-                                            blurRadius: 8,
+                                            blurRadius: 6,
                                             offset: const Offset(0, 2),
                                           ),
                                         ],
@@ -587,35 +594,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                         _getServiceIcon(
                                           serviceData['imagePath'],
                                         ),
-                                        size: 36,
+                                        size: 28, // Reduced icon size
                                         color: Theme.of(context).primaryColor,
                                       ),
                                     ),
-                                    const SizedBox(height: 12),
+                                    const SizedBox(height: 8),
                                     // Service Name
                                     Text(
                                       serviceData['serviceName'],
                                       style: const TextStyle(
-                                        fontSize: 16,
+                                        fontSize: 13, // Reduced font size
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.black,
-                                            blurRadius: 4,
-                                          ),
-                                        ],
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    // Description
-                                    Text(
-                                      serviceData['description'],
-                                      style: const TextStyle(
-                                        fontSize: 11,
                                         color: Colors.white,
                                         shadows: [
                                           Shadow(
@@ -628,7 +617,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 4),
                                     // Rating display
                                     _buildRatingDisplay(
                                       serviceData['serviceId'],
@@ -637,35 +626,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                     // Rate button
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
+                                        horizontal: 10,
+                                        vertical: 5,
                                       ),
                                       decoration: BoxDecoration(
                                         color: Colors.amber.shade600,
                                         borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              0.3,
-                                            ),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
                                       ),
                                       child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(
                                             Icons.star_rate,
-                                            size: 16,
+                                            size: 14,
                                             color: Colors.white,
                                           ),
                                           SizedBox(width: 4),
                                           Text(
-                                            'Rate Now',
+                                            'Rate', // Shortened text
                                             style: TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 11,
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
                                             ),
