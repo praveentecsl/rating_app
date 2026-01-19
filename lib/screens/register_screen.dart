@@ -1,31 +1,38 @@
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
-import 'register_screen.dart';
 import '../services/auth_service.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _universityIdController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
+  
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  String _selectedRole = 'Student';
+
+  final List<String> _roles = ['Student', 'Staff', 'Admin'];
 
   @override
   void dispose() {
+    _nameController.dispose();
     _universityIdController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -34,13 +41,20 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
+    final name = _nameController.text.trim();
     final universityId = _universityIdController.text.trim();
     final password = _passwordController.text;
+    
+    // Convert university ID to email format
+    final email = '$universityId@ruhuna.ac.lk';
 
-    // Sign in with Firebase using university ID
-    final result = await _authService.signInWithUniversityId(
-      universityId: universityId,
+    // Register with Firebase
+    final result = await _authService.signUp(
+      email: email,
       password: password,
+      name: name,
+      universityId: universityId,
+      role: _selectedRole,
     );
 
     if (!mounted) return;
@@ -50,8 +64,22 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     if (result['success']) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      // Show success dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Success'),
+          content: const Text('Account created successfully! You can now login.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // Return to login screen
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
       );
     } else {
       _showErrorDialog(result['message']);
@@ -62,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Login Failed'),
+        title: const Text('Registration Failed'),
         content: Text(message),
         actions: [
           TextButton(
@@ -71,12 +99,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  void _navigateToRegister() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const RegisterScreen()),
     );
   }
 
@@ -118,8 +140,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                       child: Icon(
-                        Icons.school,
-                        size: 80,
+                        Icons.person_add,
+                        size: 60,
                         color: Theme.of(context).primaryColor,
                       ),
                     ),
@@ -127,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Title
                     const Text(
-                      'University of Ruhuna',
+                      'Create Account',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -137,17 +159,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Rating App',
+                      'University of Ruhuna',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 32),
 
-                    // Login Card
+                    // Registration Card
                     Card(
                       elevation: 8,
                       shape: RoundedRectangleBorder(
@@ -157,14 +179,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.all(24.0),
                         child: Column(
                           children: [
-                            const Text(
-                              'Login',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
+                            // Name Field
+                            TextFormField(
+                              controller: _nameController,
+                              decoration: const InputDecoration(
+                                labelText: 'Full Name',
+                                hintText: 'John Doe',
+                                prefixIcon: Icon(Icons.person),
                               ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your name';
+                                }
+                                if (value.length < 3) {
+                                  return 'Name must be at least 3 characters';
+                                }
+                                return null;
+                              },
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 16),
 
                             // University ID Field
                             TextFormField(
@@ -172,13 +205,40 @@ class _LoginScreenState extends State<LoginScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'University ID',
                                 hintText: 'e.g., S2020001',
-                                prefixIcon: Icon(Icons.person),
+                                prefixIcon: Icon(Icons.badge),
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your university ID';
                                 }
+                                // Basic validation for university ID format
+                                if (!RegExp(r'^[A-Z]+[0-9]+$').hasMatch(value)) {
+                                  return 'Invalid ID format (e.g., S2020001)';
+                                }
                                 return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Role Dropdown
+                            DropdownButtonFormField<String>(
+                              value: _selectedRole,
+                              decoration: const InputDecoration(
+                                labelText: 'Role',
+                                prefixIcon: Icon(Icons.work),
+                              ),
+                              items: _roles.map((String role) {
+                                return DropdownMenuItem<String>(
+                                  value: role,
+                                  child: Text(role),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  setState(() {
+                                    _selectedRole = newValue;
+                                  });
+                                }
                               },
                             ),
                             const SizedBox(height: 16),
@@ -205,18 +265,53 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter your password';
+                                  return 'Please enter a password';
+                                }
+                                if (value.length < 6) {
+                                  return 'Password must be at least 6 characters';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Confirm Password Field
+                            TextFormField(
+                              controller: _confirmPasswordController,
+                              obscureText: _obscureConfirmPassword,
+                              decoration: InputDecoration(
+                                labelText: 'Confirm Password',
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscureConfirmPassword
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscureConfirmPassword = !_obscureConfirmPassword;
+                                    });
+                                  },
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please confirm your password';
+                                }
+                                if (value != _passwordController.text) {
+                                  return 'Passwords do not match';
                                 }
                                 return null;
                               },
                             ),
                             const SizedBox(height: 32),
 
-                            // Login Button
+                            // Register Button
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: _isLoading ? null : _login,
+                                onPressed: _isLoading ? null : _register,
                                 style: ElevatedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
@@ -232,53 +327,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       )
                                     : const Text(
-                                        'LOGIN',
+                                        'REGISTER',
                                         style: TextStyle(fontSize: 16),
                                       ),
                               ),
                             ),
                             const SizedBox(height: 16),
 
-                            // Register Button
+                            // Back to Login Button
                             TextButton(
-                              onPressed: _navigateToRegister,
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
                               child: const Text(
-                                'Don\'t have an account? Register',
+                                'Already have an account? Login',
                                 style: TextStyle(fontSize: 14),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Demo Info
-                    Card(
-                      color: Colors.white.withOpacity(0.9),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Note: University ID format',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Students: S2020001, S2020002, etc.',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            const Text(
-                              'Staff: ST2020001, ST2020002, etc.',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            const Text(
-                              'Admin: ADMIN001, ADMIN002, etc.',
-                              style: TextStyle(fontSize: 12),
                             ),
                           ],
                         ),
