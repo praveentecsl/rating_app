@@ -195,7 +195,7 @@ class LandingScreen extends StatelessWidget {
                               Icon(Icons.explore, size: 28),
                               SizedBox(width: 12),
                               Text(
-                                'Explore Services',
+                                'Explore Servicesss',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
