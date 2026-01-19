@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'service_detail_screen.dart';
 import 'login_screen.dart';
 import '../services/auth_service.dart';
-import '../services/rating_service.dart';
+import '../services/rating_logic.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
