@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/rating.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 import '../services/rating_service.dart';
 import 'login_screen.dart';
 
@@ -24,6 +26,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   bool _isSaving = false;
   final RatingService _ratingService = RatingService();
   final AuthService _authService = AuthService();
+  final FirestoreService _firestoreService = FirestoreService();
   User? _currentUser;
 
   // Rating pool data
@@ -248,6 +251,36 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   }
 
   Future<void> _saveAllRatings() async {
+    print('DEBUG: Save ratings button clicked');
+    try {
+      print('DEBUG: Getting current user...');
+      
+      // Add timeout to prevent hanging
+      final user = await _authService.getCurrentUserData().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('DEBUG: getCurrentUserData timed out');
+          return null;
+        },
+      );
+      
+      print('DEBUG: User retrieved - userId: ${user?.userId}, name: ${user?.name}');
+      
+      if (user == null || user.userId == null) {
+        print('DEBUG: User not logged in or userId is null');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Please log in to submit ratings. User data could not be retrieved.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        setState(() => _isSaving = false);
+        return;
+      }
     if (widget.isGuest || _currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -262,6 +295,22 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       _isSaving = true;
     });
 
+      final serviceData = _servicesData[widget.serviceId];
+      if (serviceData == null) {
+        print('DEBUG: Service data not found for serviceId: ${widget.serviceId}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Service data not found!')),
+          );
+        }
+        setState(() => _isSaving = false);
+        return;
+      }
+      final subServices =
+          serviceData['subServices'] as List<Map<String, dynamic>>;
+      
+      print('DEBUG: Found ${subServices.length} subservices');
+      print('DEBUG: Ratings to save: $_ratings');
     try {
       final serviceId = widget.service['serviceId'] as int;
       final subServices = _subServicesData[serviceId] ?? [];
@@ -270,16 +319,46 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         final subserviceName = entry.key;
         final score = entry.value.round();
 
+        // Find the subservice ID from its name
+        Map<String, dynamic>? subservice;
+        try {
+          subservice = subServices.firstWhere(
+            (s) => s['name'] == subserviceName,
+          );
+        } catch (e) {
+          print('DEBUG: Could not find subservice with name: $subserviceName');
+          continue; // Skip if not found
+        }
         final subservice = subServices.firstWhere(
           (s) => s['name'] == subserviceName,
           orElse: () => {},
         );
 
+        if (subservice == null || subservice.isEmpty) {
+          print('DEBUG: Could not find subservice with name: $subserviceName');
+          continue; // Skip if not found
         if (subservice.isEmpty) {
           print('Could not find subservice with name: $subserviceName');
           continue;
         }
 
+        print('DEBUG: Saving rating - subservice: $subserviceName (id: ${subservice['id']}), score: $score');
+
+        try {
+          // Save directly to Firestore
+          await _firestoreService.submitRating(
+            userId: user.userId!,
+            subserviceId: subservice['id'],
+            score: score,
+          );
+          print('DEBUG: Rating saved successfully to Firestore');
+        } catch (e) {
+          print('DEBUG: Error saving rating: $e');
+          rethrow;
+        }
+      }
+
+      print('DEBUG: All ratings saved, showing success message');
         final rating = Rating(
           userId: _currentUser!.userId!,
           serviceId: serviceId,
@@ -311,8 +390,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           Navigator.of(context).pop(true);
         }
       }
-    } catch (e) {
-      print('Error saving ratings: $e');
+    } catch (e, stackTrace) {
+      print('DEBUG: Error saving ratings: $e');
+      print('DEBUG: Stack trace: $stackTrace');
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -465,6 +545,207 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  serviceData?['description'] ?? '',
+                  style: const TextStyle(fontSize: 16, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+
+          // Instructions
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.blue.shade50,
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue.shade700),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Rate each aspect from 0 (Poor) to 10 (Excellent)',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Sub-services/criteria list
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: subServices.length,
+              itemBuilder: (context, index) {
+                final subService = subServices[index];
+                final subServiceName = subService['name'] as String;
+                final subServiceDescription =
+                    subService['description'] as String;
+                final currentRating = _ratings[subServiceName] ?? 5.0;
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  elevation: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Sub-service name
+                        Text(
+                          subServiceName,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        // Description
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4, bottom: 8),
+                          child: Text(
+                            subServiceDescription,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Rating display
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Rating: ${currentRating.toStringAsFixed(1)}/10',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: _getRatingColor(currentRating),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getRatingColor(
+                                  currentRating,
+                                ).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                _getRatingLabel(currentRating),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: _getRatingColor(currentRating),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        // Slider
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: _getRatingColor(currentRating),
+                            inactiveTrackColor: Colors.grey[300],
+                            thumbColor: _getRatingColor(currentRating),
+                            overlayColor: _getRatingColor(
+                              currentRating,
+                            ).withOpacity(0.2),
+                            trackHeight: 6,
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 12,
+                            ),
+                          ),
+                          child: Slider(
+                            value: currentRating,
+                            min: 0,
+                            max: 10,
+                            divisions: 100,
+                            label: currentRating.toStringAsFixed(1),
+                            onChanged: (value) {
+                              setState(() {
+                                _ratings[subServiceName] = value;
+                              });
+                            },
+                          ),
+                        ),
+
+                        // Min/Max labels
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Poor (0)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              Text(
+                                'Excellent (10)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Save Button
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _saveAllRatings,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isSaving
+                    ? const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      )
+                    : const Text('Submit All Ratings'),
+              ),
+            ),
+          ),
                 const SizedBox(height: 12),
                 if (widget.isGuest)
                   Container(

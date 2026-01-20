@@ -5,8 +5,7 @@ import 'login_screen.dart';
 import 'user_profile_screen.dart';
 import 'admin_monitoring_screen.dart';
 import '../services/auth_service.dart';
-
-import '../services/rating_service.dart';
+import '../services/firestore_service.dart';
 import '../models/user.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,7 +16,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  RatingService? _ratingService;
+  final FirestoreService _firestoreService = FirestoreService();
   Map<int, Map<String, dynamic>> _serviceRatings = {};
   List<Map<String, dynamic>> _trendingServices = [];
   bool _isLoadingRatings = true;
@@ -28,15 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserData();
-    // Initialize RatingService after widget is built to avoid Firebase timing issues
-    Future.microtask(() {
-      if (mounted) {
-        setState(() {
-          _ratingService = RatingService();
-        });
-        _loadServiceRatings();
-      }
-    });
+    _loadServiceRatings();
   }
 
   Future<void> _loadUserData() async {
@@ -56,32 +47,62 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadServiceRatings() async {
-    if (_ratingService == null) return;
-
     try {
+      print('DEBUG: Starting to load service ratings from Firestore...');
+      
       final ratings = <int, Map<String, dynamic>>{};
+      
+      // Service ID to subservice IDs mapping
+      final Map<int, List<int>> serviceSubservices = {
+        1: [1, 2, 3, 4, 5],        // Food (Canteens)
+        2: [6, 7, 8, 9],           // Security
+        3: [10, 11, 12, 13, 14],   // Library
+        4: [15, 16, 17, 18, 19],   // Sports Facilities
+        5: [20, 21, 22, 23, 24],   // Transport
+      };
 
       for (var service in _services) {
         final serviceId = service['serviceId'] as int;
-        final stats = await _ratingService!.getServiceRatingStats(serviceId);
-        ratings[serviceId] = stats;
+        print('DEBUG: Loading stats for service $serviceId from Firestore');
+        
+        final subserviceIds = serviceSubservices[serviceId] ?? [];
+        final stats = await _firestoreService.getServiceStats(subserviceIds);
+        print('DEBUG: Stats for service $serviceId: $stats');
+        
+        // Convert stats to match expected format with percentage
+        final avgScore = (stats['average_score'] ?? 0.0) as num;
+        final totalRatings = (stats['total_ratings'] ?? 0) as int;
+        
+        ratings[serviceId] = {
+          'averageRating': avgScore.toDouble(),
+          'percentage': (avgScore.toDouble() / 10.0) * 100, // Convert 0-10 scale to percentage
+          'totalRatings': totalRatings,
+        };
       }
 
-      // Get trending services (top 3)
-      final allServiceIds = _services
-          .map((s) => s['serviceId'] as int)
-          .toList();
-      final trendingData = await _ratingService!.getTrendingServices(
-        allServiceIds,
-      );
+      print('DEBUG: All ratings loaded from Firestore: $ratings');
 
-      // Map trending data back to full service info
-      final trending = trendingData.take(3).map((tData) {
+      // Get trending services (top 3 by rating)
+      final List<Map<String, dynamic>> trending = [];
+      
+      // Sort services by average rating
+      final sortedServices = ratings.entries.toList()
+        ..sort((a, b) => (b.value['averageRating'] as double)
+            .compareTo(a.value['averageRating'] as double));
+      
+      // Take top 3 and map back to full service info
+      for (var entry in sortedServices.take(3)) {
         final service = _services.firstWhere(
-          (s) => s['serviceId'] == tData['serviceId'],
+          (s) => s['serviceId'] == entry.key,
+          orElse: () => _services.first,
         );
-        return {...service, ...tData};
-      }).toList();
+        trending.add({
+          ...service,
+          'averageRating': entry.value['averageRating'],
+          'percentage': entry.value['percentage'],
+          'totalRatings': entry.value['totalRatings'],
+        });
+      }
 
       if (mounted) {
         setState(() {
@@ -89,9 +110,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _trendingServices = trending;
           _isLoadingRatings = false;
         });
+        print('DEBUG: Ratings loaded successfully from Firestore');
       }
-    } catch (e) {
-      print('Error loading ratings: $e');
+    } catch (e, stackTrace) {
+      print('Error loading ratings from Firestore: $e');
+      print('Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
           _isLoadingRatings = false;
