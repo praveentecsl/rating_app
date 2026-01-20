@@ -129,25 +129,12 @@ class AuthService {
         final data = doc.data()!;
         final universityId = data['universityId'] ?? '';
         
-        // Create user object from Firestore data
-        final firestoreUser = app_models.User(
-          universityId: universityId,
-          name: data['name'] ?? '',
-          role: data['role'] ?? '',
-          password: 'firebase_auth', // Placeholder for Firebase users
-        );
-        
-        // Sync with local database and get user with userId
-        final dbHelper = DatabaseHelper.instance;
-        final localUserId = await dbHelper.insertOrUpdateUser(firestoreUser);
-        
-        // Return user with local database ID
+        // Return user with UID as userId
         return app_models.User(
-          userId: localUserId,
+          userId: uid,
           universityId: universityId,
           name: data['name'] ?? '',
           role: data['role'] ?? '',
-          password: '', // Don't store password in the app
         );
       }
       return null;

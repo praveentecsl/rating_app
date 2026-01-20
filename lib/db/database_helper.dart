@@ -90,32 +90,24 @@ class DatabaseHelper {
   // User operations
   Future<int> insertUser(User user) async {
     final db = await database;
-    final hashedUser = User(
-      universityId: user.universityId,
-      name: user.name,
-      role: user.role,
-      password: _hashPassword(user.password),
-    );
-    return await db.insert('Users', hashedUser.toMap());
+    return await db.insert('Users', user.toMap());
   }
 
   Future<User?> authenticateUser(String universityId, String password) async {
     final db = await database;
-    final hashedPassword = _hashPassword(password);
-
     final results = await db.query(
       'Users',
       where: 'university_id = ? AND password = ?',
-      whereArgs: [universityId, hashedPassword],
+      whereArgs: [universityId, password],
     );
 
     if (results.isNotEmpty) {
-      return User.fromMap(results.first);
+      return User.fromMap(results.first, userId: results.first['user_id']?.toString());
     }
     return null;
   }
 
-  Future<User?> getUserById(int userId) async {
+  Future<User?> getUserById(String userId) async {
     final db = await database;
     final results = await db.query(
       'Users',
@@ -124,7 +116,7 @@ class DatabaseHelper {
     );
 
     if (results.isNotEmpty) {
-      return User.fromMap(results.first);
+      return User.fromMap(results.first, userId: userId);
     }
     return null;
   }
@@ -138,12 +130,12 @@ class DatabaseHelper {
     );
 
     if (results.isNotEmpty) {
-      return User.fromMap(results.first);
+      return User.fromMap(results.first, userId: results.first['user_id']?.toString());
     }
     return null;
   }
 
-  Future<int> insertOrUpdateUser(User user) async {
+  Future<String> insertOrUpdateUser(User user) async {
     final db = await database;
     final existing = await getUserByUniversityId(user.universityId);
     
@@ -158,10 +150,11 @@ class DatabaseHelper {
         where: 'user_id = ?',
         whereArgs: [existing.userId],
       );
-      return existing.userId!;
+      return existing.userId;
     } else {
       // Insert new user
-      return await db.insert('Users', user.toMap());
+      final id = await db.insert('Users', user.toMap());
+      return id.toString();
     }
   }
 
@@ -222,7 +215,7 @@ class DatabaseHelper {
       // Update existing rating
       return await db.update(
         'Ratings',
-        {'score': rating.score, 'comment': rating.comment},
+        {'score': rating.score},
         where: 'user_id = ? AND subservice_id = ?',
         whereArgs: [rating.userId, rating.subserviceId],
       );
@@ -613,7 +606,7 @@ class DatabaseHelper {
   // Close database
   // Get all ratings by a specific user
   Future<List<Map<String, dynamic>>> getUserRatingsWithDetails(
-    int userId,
+    String userId,
   ) async {
     final db = await database;
     final results = await db.rawQuery(
@@ -640,7 +633,7 @@ class DatabaseHelper {
   }
 
   // Get user's contribution statistics
-  Future<Map<String, dynamic>> getUserContributionStats(int userId) async {
+  Future<Map<String, dynamic>> getUserContributionStats(String userId) async {
     final db = await database;
     final result = await db.rawQuery(
       '''
@@ -726,7 +719,7 @@ class DatabaseHelper {
 
   // Get service rating distribution for a user
   Future<Map<String, dynamic>> getUserServiceRating(
-    int userId,
+    String userId,
     int serviceId,
   ) async {
     final db = await database;

@@ -43,6 +43,52 @@ class _AdminMonitoringScreenState extends State<AdminMonitoringScreen> {
     }
   }
 
+// Hardcoded services list for immediate loading
+  static final List<Map<String, dynamic>> _services = [
+    {
+      'serviceId': 1,
+      'serviceName': 'Food (Canteens)',
+      'description': 'Campus dining facilities',
+      'imagePath': 'canteen',
+    },
+    {
+      'serviceId': 2,
+      'serviceName': 'Security',
+      'description': 'Student security services',
+      'imagePath': 'security',
+    },
+    {
+      'serviceId': 3,
+      'serviceName': 'Library',
+      'description': 'University library facilities',
+      'imagePath': 'library',
+    },
+    {
+      'serviceId': 4,
+      'serviceName': 'Lecture Halls',
+      'description': 'Classroom and lecture hall conditions',
+      'imagePath': 'lecture_hall',
+    },
+    {
+      'serviceId': 5,
+      'serviceName': 'Gardening',
+      'description': 'Campus landscaping and environment',
+      'imagePath': 'gardening',
+    },
+    {
+      'serviceId': 6,
+      'serviceName': 'Hostel Facilities',
+      'description': 'Hostel facilities',
+      'imagePath': 'hostel',
+    },
+    {
+      'serviceId': 7,
+      'serviceName': 'Sports',
+      'description': 'Sports facilities and activities',
+      'imagePath': 'sports',
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -163,6 +209,8 @@ class _AdminMonitoringScreenState extends State<AdminMonitoringScreen> {
       severityIcon = Icons.info;
     }
 
+    final service = _services.firstWhere((s) => s['serviceId'] == serviceId);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 4,
@@ -171,7 +219,7 @@ class _AdminMonitoringScreenState extends State<AdminMonitoringScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ServiceDetailScreen(serviceId: serviceId),
+              builder: (context) => ServiceDetailScreen(service: service),
             ),
           );
         },
@@ -394,6 +442,8 @@ class _AdminMonitoringScreenState extends State<AdminMonitoringScreen> {
     } else {
       scoreColor = Colors.red;
     }
+    final serviceData =
+        _services.firstWhere((s) => s['serviceId'] == serviceId);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -402,7 +452,7 @@ class _AdminMonitoringScreenState extends State<AdminMonitoringScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ServiceDetailScreen(serviceId: serviceId),
+              builder: (context) => ServiceDetailScreen(service: serviceData),
             ),
           );
         },

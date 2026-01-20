@@ -2,34 +2,24 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'service_detail_screen.dart';
 import 'login_screen.dart';
-import 'user_profile_screen.dart';
-import 'admin_monitoring_screen.dart';
-import '../services/auth_service.dart';
-
 import '../services/rating_service.dart';
-import '../models/user.dart';
 
-
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class ExploreServicesScreen extends StatefulWidget {
+  const ExploreServicesScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<ExploreServicesScreen> createState() => _ExploreServicesScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _ExploreServicesScreenState extends State<ExploreServicesScreen> {
   RatingService? _ratingService;
   Map<int, Map<String, dynamic>> _serviceRatings = {};
   List<Map<String, dynamic>> _trendingServices = [];
   bool _isLoadingRatings = true;
-  User? _currentUser;
-  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
-    // Initialize RatingService after widget is built to avoid Firebase timing issues
     Future.microtask(() {
       if (mounted) {
         setState(() {
@@ -38,20 +28,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _loadServiceRatings();
       }
     });
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      final user = await _authService.getCurrentUserData();
-      print('DEBUG HomeScreen: User loaded - ${user?.name}, userId: ${user?.userId}');
-      if (mounted) {
-        setState(() {
-          _currentUser = user;
-        });
-      }
-    } catch (e) {
-      print('DEBUG HomeScreen: Error loading user - $e');
-    }
   }
 
   Future<void> _loadServiceRatings() async {
@@ -66,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ratings[serviceId] = stats;
       }
 
-      // Get trending services (top 3)
       final allServiceIds = _services
           .map((s) => s['serviceId'] as int)
           .toList();
@@ -74,7 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
         allServiceIds,
       );
 
-      // Map trending data back to full service info
       final trending = trendingData.take(3).map((tData) {
         final service = _services.firstWhere(
           (s) => s['serviceId'] == tData['serviceId'],
@@ -99,7 +73,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Hardcoded services list for immediate loading
   static final List<Map<String, dynamic>> _services = [
     {
       'serviceId': 1,
@@ -170,78 +143,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('University of Ruhuna'),
+        title: const Text('Explore Services'),
         centerTitle: true,
         elevation: 0,
         actions: [
-          // Show monitoring button only for admin users
-          if (_currentUser?.role == 'admin')
-            IconButton(
-              icon: const Icon(Icons.dashboard),
-              tooltip: 'Monitoring Dashboard',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AdminMonitoringScreen(),
-                  ),
-                );
-              },
-            ),
-          IconButton(
-            icon: const Icon(Icons.account_circle),
-            tooltip: 'My Profile',
+          TextButton.icon(
+            icon: const Icon(Icons.login, color: Colors.white),
+            label: const Text('Login', style: TextStyle(color: Colors.white)),
             onPressed: () {
-              print('DEBUG: Profile button clicked, user: ${_currentUser?.name}');
-              if (_currentUser == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Loading user data... Please try again'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-                _loadUserData(); // Try loading again
-                return;
-              }
-              
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => UserProfileScreen(user: _currentUser!),
-                ),
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
               );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: () async {
-              // Show confirmation dialog
-              final shouldLogout = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Logout'),
-                  content: const Text('Are you sure you want to logout?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Logout'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (shouldLogout == true && context.mounted) {
-                await _authService.signOut();
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
             },
           ),
         ],
@@ -250,7 +163,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with Logo and Welcome
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -266,7 +178,6 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  // University Logo with fallback
                   Container(
                     width: 100,
                     height: 100,
@@ -286,7 +197,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         'assets/images/logo.png',
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          // Fallback to icon if image not found
                           return Icon(
                             Icons.school,
                             size: 60,
@@ -308,15 +218,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Rate and improve university services',
+                    'View ratings and trends for university services',
                     style: TextStyle(fontSize: 16, color: Colors.white70),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
-
-            // Stats Card
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Card(
@@ -354,8 +262,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // Trending Services Section
             if (_trendingServices.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -439,9 +345,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               MaterialPageRoute(
                                 builder: (context) => ServiceDetailScreen(
                                   service: service,
+                                  isGuest: true,
                                 ),
                               ),
-                            ).then((_) => _loadServiceRatings());
+                            );
                           },
                         ),
                       );
@@ -450,7 +357,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-
             // All Services Section
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -476,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Tap any service to rate its aspects',
+                    'Tap any service to view its aspects',
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 16),
@@ -510,9 +416,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               MaterialPageRoute(
                                 builder: (context) => ServiceDetailScreen(
                                   service: serviceData,
+                                  isGuest: true,
                                 ),
                               ),
-                            ).then((_) => _loadServiceRatings());
+                            );
                           },
                           child: Stack(
                             children: [
@@ -625,27 +532,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                       serviceData['serviceId'],
                                     ),
                                     const Spacer(),
-                                    // Rate button
+                                    // View button
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 10,
                                         vertical: 5,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.amber.shade600,
+                                        color: Colors.blue.shade600,
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(
-                                            Icons.star_rate,
+                                            Icons.remove_red_eye,
                                             size: 14,
                                             color: Colors.white,
                                           ),
                                           SizedBox(width: 4),
                                           Text(
-                                            'Rate', // Shortened text
+                                            'View',
                                             style: TextStyle(
                                               fontSize: 11,
                                               color: Colors.white,

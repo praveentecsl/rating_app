@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'explore_services_screen.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -171,10 +172,10 @@ class LandingScreen extends StatelessWidget {
                         constraints: const BoxConstraints(maxWidth: 400),
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pushReplacement(
+                            Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const HomeScreen(),
+                                builder: (context) => const ExploreServicesScreen(),
                               ),
                             );
                           },

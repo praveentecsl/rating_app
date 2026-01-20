@@ -28,10 +28,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     try {
       final ratings = await _dbHelper.getUserRatingsWithDetails(
-        widget.user.userId!,
+        widget.user.userId,
       );
       final stats = await _dbHelper.getUserContributionStats(
-        widget.user.userId!,
+        widget.user.userId,
       );
 
       setState(() {
