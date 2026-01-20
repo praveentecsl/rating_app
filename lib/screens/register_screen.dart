@@ -15,7 +15,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
-  
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -44,7 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final name = _nameController.text.trim();
     final universityId = _universityIdController.text.trim();
     final password = _passwordController.text;
-    
+
     // Convert university ID to email format
     final email = '$universityId@ruhuna.ac.lk';
 
@@ -69,7 +69,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Success'),
-          content: const Text('Account created successfully! You can now login.'),
+          content: const Text(
+            'Account created successfully! You can now login.',
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -212,7 +214,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   return 'Please enter your university ID';
                                 }
                                 // Basic validation for university ID format
-                                if (!RegExp(r'^[A-Z]+[0-9]+$').hasMatch(value)) {
+                                if (!RegExp(
+                                  r'^[A-Z]+[0-9]+$',
+                                ).hasMatch(value)) {
                                   return 'Invalid ID format (e.g., S2020001)';
                                 }
                                 return null;
@@ -222,7 +226,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                             // Role Dropdown
                             DropdownButtonFormField<String>(
-                              value: _selectedRole,
+                              initialValue: _selectedRole,
                               decoration: const InputDecoration(
                                 labelText: 'Role',
                                 prefixIcon: Icon(Icons.work),
@@ -290,7 +294,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                   onPressed: () {
                                     setState(() {
-                                      _obscureConfirmPassword = !_obscureConfirmPassword;
+                                      _obscureConfirmPassword =
+                                          !_obscureConfirmPassword;
                                     });
                                   },
                                 ),

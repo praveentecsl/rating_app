@@ -266,19 +266,12 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Future<void> _saveAllRatings() async {
     try {
       final user = await _authService.getCurrentUserData();
-      print('DEBUG: User from getCurrentUserData: $user');
-      print('DEBUG: User ID: ${user?.userId}');
-      print('DEBUG: User University ID: ${user?.universityId}');
-      
       if (user == null || user.userId == null) {
-        print('DEBUG: User or userId is null');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text(
-                user == null 
-                  ? 'Please log in to submit ratings' 
-                  : 'User data error. Please try logging out and in again.'
+                'Please log in to submit ratings. User data could not be retrieved.',
               ),
               backgroundColor: Colors.red,
             ),
@@ -291,14 +284,36 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         _isSaving = true;
       });
 
-      // Save all ratings to database
+      final serviceData = _servicesData[widget.serviceId];
+      if (serviceData == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Service data not found!')),
+          );
+        }
+        return;
+      }
+      final subServices =
+          serviceData['subServices'] as List<Map<String, dynamic>>;
+
       for (var entry in _ratings.entries) {
-        final subserviceId = entry.key;
+        final subserviceName = entry.key;
         final score = entry.value.round();
+
+        // Find the subservice ID from its name
+        final subservice = subServices.firstWhere(
+          (s) => s['name'] == subserviceName,
+          orElse: () => {},
+        );
+
+        if (subservice.isEmpty) {
+          print('Could not find subservice with name: $subserviceName');
+          continue; // Skip if not found
+        }
 
         final rating = Rating(
           userId: user.userId!,
-          subserviceId: subserviceId,
+          subserviceId: subservice['id'], // Use the correct integer ID
           score: score,
         );
 
@@ -320,14 +335,13 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           _isSaving = false;
         });
 
-        // Wait a moment then go back
         await Future.delayed(const Duration(milliseconds: 800));
         if (mounted) {
           Navigator.of(context).pop(true);
         }
       }
     } catch (e) {
-      print('DEBUG: Error saving ratings: $e');
+      print('Error saving ratings: $e');
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -853,7 +867,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           ),
 
           // Save Button
-          // Save Button
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -869,64 +882,27 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isSaving ? null : () {
-                  print('DEBUG: Submit button pressed');
-                  _saveAllRatings();
-                },
+                onPressed: _isSaving ? null : _saveAllRatings,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                child: _isSaving
+                    ? const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      )
+                    : const Text('Submit All Ratings'),
               ),
-              onChanged: (value) {
-                _comment = value;
-              },
             ),
           ),
-
-          const SizedBox(height: 20),
         ],
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton(
-          onPressed: _isSaving ? null : _submitRating,
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-          ),
-          child: _isSaving
-              ? const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                )
-              : const Text('Submit Rating'),
-        ),
       ),
     );
   }
-
-  Color _getRatingColor(double rating) {
-    if (rating >= 8) return Colors.green;
-    if (rating >= 6) return Colors.lightGreen;
-    if (rating >= 4) return Colors.orange;
-    if (rating >= 2) return Colors.deepOrange;
-    return Colors.red;
-  }
-
-  String _getRatingLabel(double rating) {
-    if (rating >= 9) return 'Excellent';
-    if (rating >= 7) return 'Good';
-    if (rating >= 5) return 'Average';
-    if (rating >= 3) return 'Below Average';
-    return 'Poor';
-  }
 }
 
-// A simple RatingBar widget, you might need to add a dependency like `flutter_rating_bar`
 // For now, a placeholder is used to avoid breaking the code.
 // Please add `flutter_rating_bar: ^4.0.1` to your pubspec.yaml
 class RatingBar {
@@ -940,22 +916,20 @@ class RatingBar {
     required Widget Function(BuildContext, int) itemBuilder,
     required void Function(double) onRatingUpdate,
   }) {
-    return Container(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(itemCount, (index) {
-          return IconButton(
-            onPressed: () {
-              onRatingUpdate(index + 1.0);
-            },
-            icon: Icon(
-              Icons.star,
-              color: initialRating > index ? Colors.amber : Colors.grey,
-            ),
-            padding: itemPadding,
-          );
-        }),
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(itemCount, (index) {
+        return IconButton(
+          onPressed: () {
+            onRatingUpdate(index + 1.0);
+          },
+          icon: Icon(
+            Icons.star,
+            color: initialRating > index ? Colors.amber : Colors.grey,
+          ),
+          padding: itemPadding,
+        );
+      }),
     );
   }
 }

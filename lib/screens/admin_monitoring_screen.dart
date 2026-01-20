@@ -3,7 +3,7 @@ import '../db/database_helper.dart';
 import 'service_detail_screen.dart';
 
 class AdminMonitoringScreen extends StatefulWidget {
-  const AdminMonitoringScreen({Key? key}) : super(key: key);
+  const AdminMonitoringScreen({super.key});
 
   @override
   State<AdminMonitoringScreen> createState() => _AdminMonitoringScreenState();
