@@ -4,7 +4,8 @@ import '../models/user.dart' as app_models;
 import '../db/database_helper.dart';
 
 class AuthService {
-  final firebase_auth.FirebaseAuth _firebaseAuth = firebase_auth.FirebaseAuth.instance;
+  final firebase_auth.FirebaseAuth _firebaseAuth =
+      firebase_auth.FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Get current user
@@ -18,7 +19,8 @@ class AuthService {
   }
 
   // Stream of auth state changes
-  Stream<firebase_auth.User?> get authStateChanges => _firebaseAuth.authStateChanges();
+  Stream<firebase_auth.User?> get authStateChanges =>
+      _firebaseAuth.authStateChanges();
 
   // Sign up with email and password
   Future<Map<String, dynamic>> signUp({
@@ -44,15 +46,9 @@ class AuthService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      return {
-        'success': true,
-        'message': 'Account created successfully',
-      };
+      return {'success': true, 'message': 'Account created successfully'};
     } on firebase_auth.FirebaseAuthException catch (e) {
-      return {
-        'success': false,
-        'message': _getErrorMessage(e.code),
-      };
+      return {'success': false, 'message': _getErrorMessage(e.code)};
     } catch (e) {
       return {
         'success': false,
@@ -72,15 +68,9 @@ class AuthService {
         password: password,
       );
 
-      return {
-        'success': true,
-        'message': 'Login successful',
-      };
+      return {'success': true, 'message': 'Login successful'};
     } on firebase_auth.FirebaseAuthException catch (e) {
-      return {
-        'success': false,
-        'message': _getErrorMessage(e.code),
-      };
+      return {'success': false, 'message': _getErrorMessage(e.code)};
     } catch (e) {
       return {
         'success': false,
@@ -97,21 +87,15 @@ class AuthService {
     try {
       // Convert university ID to email format
       String email = '$universityId@ruhuna.ac.lk';
-      
+
       await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      return {
-        'success': true,
-        'message': 'Login successful',
-      };
+      return {'success': true, 'message': 'Login successful'};
     } on firebase_auth.FirebaseAuthException catch (e) {
-      return {
-        'success': false,
-        'message': _getErrorMessage(e.code),
-      };
+      return {'success': false, 'message': _getErrorMessage(e.code)};
     } catch (e) {
       return {
         'success': false,
@@ -124,11 +108,11 @@ class AuthService {
   Future<app_models.User?> getUserData(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
-      
+
       if (doc.exists) {
         final data = doc.data()!;
         final universityId = data['universityId'] ?? '';
-        
+
         // Return user with UID as userId
         return app_models.User(
           userId: uid,
@@ -153,15 +137,9 @@ class AuthService {
   Future<Map<String, dynamic>> resetPassword(String email) async {
     try {
       await _firebaseAuth.sendPasswordResetEmail(email: email);
-      return {
-        'success': true,
-        'message': 'Password reset email sent',
-      };
+      return {'success': true, 'message': 'Password reset email sent'};
     } on firebase_auth.FirebaseAuthException catch (e) {
-      return {
-        'success': false,
-        'message': _getErrorMessage(e.code),
-      };
+      return {'success': false, 'message': _getErrorMessage(e.code)};
     }
   }
 

@@ -12,11 +12,7 @@ class User {
   });
 
   Map<String, dynamic> toMap() {
-    return {
-      'university_id': universityId,
-      'name': name,
-      'role': role,
-    };
+    return {'university_id': universityId, 'name': name, 'role': role};
   }
 
   factory User.fromMap(Map<String, dynamic> map, {String? userId}) {

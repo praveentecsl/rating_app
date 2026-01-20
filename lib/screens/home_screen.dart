@@ -9,7 +9,6 @@ import '../services/auth_service.dart';
 import '../services/rating_service.dart';
 import '../models/user.dart';
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -43,7 +42,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadUserData() async {
     try {
       final user = await _authService.getCurrentUserData();
-      print('DEBUG HomeScreen: User loaded - ${user?.name}, userId: ${user?.userId}');
+      print(
+        'DEBUG HomeScreen: User loaded - ${user?.name}, userId: ${user?.userId}',
+      );
       if (mounted) {
         setState(() {
           _currentUser = user;
@@ -192,7 +193,9 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.account_circle),
             tooltip: 'My Profile',
             onPressed: () {
-              print('DEBUG: Profile button clicked, user: ${_currentUser?.name}');
+              print(
+                'DEBUG: Profile button clicked, user: ${_currentUser?.name}',
+              );
               if (_currentUser == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -203,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _loadUserData(); // Try loading again
                 return;
               }
-              
+
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -437,9 +440,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => ServiceDetailScreen(
-                                  service: service,
-                                ),
+                                builder: (context) =>
+                                    ServiceDetailScreen(service: service),
                               ),
                             ).then((_) => _loadServiceRatings());
                           },
@@ -508,9 +510,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => ServiceDetailScreen(
-                                  service: serviceData,
-                                ),
+                                builder: (context) =>
+                                    ServiceDetailScreen(service: serviceData),
                               ),
                             ).then((_) => _loadServiceRatings());
                           },

@@ -34,48 +34,160 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   // Hardcoded sub-services data
   static final Map<int, List<Map<String, dynamic>>> _subServicesData = {
     1: [
-      {'id': 1, 'name': 'Food Quality', 'description': 'Quality and taste of food'},
-      {'id': 2, 'name': 'Seating Availability', 'description': 'Availability of seats'},
-      {'id': 3, 'name': 'Queue Management', 'description': 'Waiting time and queue efficiency'},
-      {'id': 4, 'name': 'Comfortability', 'description': 'Overall comfort and ambiance'},
-      {'id': 5, 'name': 'Animal Interruptions', 'description': 'Issues with animals in dining areas'},
+      {
+        'id': 1,
+        'name': 'Food Quality',
+        'description': 'Quality and taste of food',
+      },
+      {
+        'id': 2,
+        'name': 'Seating Availability',
+        'description': 'Availability of seats',
+      },
+      {
+        'id': 3,
+        'name': 'Queue Management',
+        'description': 'Waiting time and queue efficiency',
+      },
+      {
+        'id': 4,
+        'name': 'Comfortability',
+        'description': 'Overall comfort and ambiance',
+      },
+      {
+        'id': 5,
+        'name': 'Animal Interruptions',
+        'description': 'Issues with animals in dining areas',
+      },
     ],
     2: [
-      {'id': 6, 'name': 'Response Time', 'description': 'Speed of security response'},
-      {'id': 7, 'name': 'Visibility', 'description': 'Security presence on campus'},
-      {'id': 8, 'name': 'Safety Feeling', 'description': 'How safe students feel'},
-      {'id': 9, 'name': 'Equipment Quality', 'description': 'Quality of security equipment'},
+      {
+        'id': 6,
+        'name': 'Response Time',
+        'description': 'Speed of security response',
+      },
+      {
+        'id': 7,
+        'name': 'Visibility',
+        'description': 'Security presence on campus',
+      },
+      {
+        'id': 8,
+        'name': 'Safety Feeling',
+        'description': 'How safe students feel',
+      },
+      {
+        'id': 9,
+        'name': 'Equipment Quality',
+        'description': 'Quality of security equipment',
+      },
     ],
     3: [
-      {'id': 10, 'name': 'Book Availability', 'description': 'Availability of required books'},
-      {'id': 11, 'name': 'Study Space', 'description': 'Quality and availability of study areas'},
-      {'id': 12, 'name': 'Noise Level', 'description': 'Quietness of the library'},
-      {'id': 13, 'name': 'Staff Helpfulness', 'description': 'Library staff assistance'},
-      {'id': 14, 'name': 'Internet Access', 'description': 'WiFi and computer access'},
+      {
+        'id': 10,
+        'name': 'Book Availability',
+        'description': 'Availability of required books',
+      },
+      {
+        'id': 11,
+        'name': 'Study Space',
+        'description': 'Quality and availability of study areas',
+      },
+      {
+        'id': 12,
+        'name': 'Noise Level',
+        'description': 'Quietness of the library',
+      },
+      {
+        'id': 13,
+        'name': 'Staff Helpfulness',
+        'description': 'Library staff assistance',
+      },
+      {
+        'id': 14,
+        'name': 'Internet Access',
+        'description': 'WiFi and computer access',
+      },
     ],
     4: [
-      {'id': 15, 'name': 'Seating Comfort', 'description': 'Comfort of chairs and desks'},
-      {'id': 16, 'name': 'Audio/Visual Equipment', 'description': 'Quality of AV equipment'},
+      {
+        'id': 15,
+        'name': 'Seating Comfort',
+        'description': 'Comfort of chairs and desks',
+      },
+      {
+        'id': 16,
+        'name': 'Audio/Visual Equipment',
+        'description': 'Quality of AV equipment',
+      },
       {'id': 17, 'name': 'Cleanliness', 'description': 'Cleanliness of halls'},
-      {'id': 18, 'name': 'Ventilation', 'description': 'Air quality and temperature'},
+      {
+        'id': 18,
+        'name': 'Ventilation',
+        'description': 'Air quality and temperature',
+      },
     ],
     5: [
-      {'id': 19, 'name': 'Maintenance', 'description': 'Regular upkeep of gardens'},
-      {'id': 20, 'name': 'Aesthetic Appeal', 'description': 'Visual beauty of campus'},
-      {'id': 21, 'name': 'Cleanliness', 'description': 'Cleanliness of outdoor areas'},
+      {
+        'id': 19,
+        'name': 'Maintenance',
+        'description': 'Regular upkeep of gardens',
+      },
+      {
+        'id': 20,
+        'name': 'Aesthetic Appeal',
+        'description': 'Visual beauty of campus',
+      },
+      {
+        'id': 21,
+        'name': 'Cleanliness',
+        'description': 'Cleanliness of outdoor areas',
+      },
     ],
     6: [
-      {'id': 22, 'name': 'Room Condition', 'description': 'State of hostel rooms'},
-      {'id': 23, 'name': 'Bathroom Facilities', 'description': 'Quality of bathrooms'},
-      {'id': 24, 'name': 'Common Areas', 'description': 'Quality of shared spaces'},
+      {
+        'id': 22,
+        'name': 'Room Condition',
+        'description': 'State of hostel rooms',
+      },
+      {
+        'id': 23,
+        'name': 'Bathroom Facilities',
+        'description': 'Quality of bathrooms',
+      },
+      {
+        'id': 24,
+        'name': 'Common Areas',
+        'description': 'Quality of shared spaces',
+      },
       {'id': 25, 'name': 'Security', 'description': 'Hostel security measures'},
-      {'id': 26, 'name': 'Internet Connection', 'description': 'WiFi availability and speed'},
+      {
+        'id': 26,
+        'name': 'Internet Connection',
+        'description': 'WiFi availability and speed',
+      },
     ],
     7: [
-      {'id': 27, 'name': 'Equipment Quality', 'description': 'Quality of sports equipment'},
-      {'id': 28, 'name': 'Facility Condition', 'description': 'State of sports facilities'},
-      {'id': 29, 'name': 'Availability', 'description': 'Access to sports facilities'},
-      {'id': 30, 'name': 'Coaching Support', 'description': 'Quality of coaching'},
+      {
+        'id': 27,
+        'name': 'Equipment Quality',
+        'description': 'Quality of sports equipment',
+      },
+      {
+        'id': 28,
+        'name': 'Facility Condition',
+        'description': 'State of sports facilities',
+      },
+      {
+        'id': 29,
+        'name': 'Availability',
+        'description': 'Access to sports facilities',
+      },
+      {
+        'id': 30,
+        'name': 'Coaching Support',
+        'description': 'Quality of coaching',
+      },
     ],
   };
 
@@ -306,7 +418,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   }
 
   Widget _buildPoolItem(
-      String label, String value, IconData icon, Color color) {
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         CircleAvatar(
@@ -319,10 +435,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(color: Colors.grey[700], fontSize: 12),
-        ),
+        Text(label, style: TextStyle(color: Colors.grey[700], fontSize: 12)),
       ],
     );
   }
@@ -334,10 +447,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     final subServices = _subServicesData[serviceId] ?? [];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(serviceName),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: Text(serviceName), elevation: 0),
       body: Column(
         children: [
           Expanded(
@@ -350,7 +460,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   widget.isGuest
                       ? 'Rating Criteria'
                       : 'Rate the following criteria:',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 if (widget.isGuest)
@@ -387,7 +500,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                     decoration: TextDecoration.underline,
                                   ),
                                 ),
-                              )
+                              ),
                             ],
                           ),
                         ),
@@ -419,8 +532,12 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                           const SizedBox(height: 8),
                           SliderTheme(
                             data: SliderTheme.of(context).copyWith(
-                              activeTrackColor: _getRatingColor(_ratings[subName]!),
-                              inactiveTrackColor: _getRatingColor(_ratings[subName]!).withOpacity(0.3),
+                              activeTrackColor: _getRatingColor(
+                                _ratings[subName]!,
+                              ),
+                              inactiveTrackColor: _getRatingColor(
+                                _ratings[subName]!,
+                              ).withOpacity(0.3),
                               thumbColor: _getRatingColor(_ratings[subName]!),
                             ),
                             child: Slider(
@@ -472,7 +589,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   ),
                   child: _isSaving
                       ? const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         )
                       : const Text('Submit All Ratings'),
                 ),

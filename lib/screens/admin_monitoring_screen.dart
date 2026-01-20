@@ -43,7 +43,7 @@ class _AdminMonitoringScreenState extends State<AdminMonitoringScreen> {
     }
   }
 
-// Hardcoded services list for immediate loading
+  // Hardcoded services list for immediate loading
   static final List<Map<String, dynamic>> _services = [
     {
       'serviceId': 1,
@@ -442,8 +442,9 @@ class _AdminMonitoringScreenState extends State<AdminMonitoringScreen> {
     } else {
       scoreColor = Colors.red;
     }
-    final serviceData =
-        _services.firstWhere((s) => s['serviceId'] == serviceId);
+    final serviceData = _services.firstWhere(
+      (s) => s['serviceId'] == serviceId,
+    );
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),

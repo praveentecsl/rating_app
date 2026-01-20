@@ -175,7 +175,8 @@ class LandingScreen extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const ExploreServicesScreen(),
+                                builder: (context) =>
+                                    const ExploreServicesScreen(),
                               ),
                             );
                           },

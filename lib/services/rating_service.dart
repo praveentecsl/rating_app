@@ -30,11 +30,7 @@ class RatingService {
           .get();
 
       if (snapshot.docs.isEmpty) {
-        return {
-          'averageRating': 0.0,
-          'percentage': 0.0,
-          'totalRatings': 0,
-        };
+        return {'averageRating': 0.0, 'percentage': 0.0, 'totalRatings': 0};
       }
 
       double total = 0;
@@ -51,11 +47,7 @@ class RatingService {
         'totalRatings': snapshot.docs.length,
       };
     } catch (e) {
-      return {
-        'averageRating': 0.0,
-        'percentage': 0.0,
-        'totalRatings': 0,
-      };
+      return {'averageRating': 0.0, 'percentage': 0.0, 'totalRatings': 0};
     }
   }
 
@@ -67,22 +59,23 @@ class RatingService {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'id': doc.id,
-          'userId': data['userId'] ?? '',
-          'rating': data['rating'] ?? 0.0,
-          'comment': data['comment'],
-          'timestamp': data['timestamp'],
-        };
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              'userId': data['userId'] ?? '',
+              'rating': data['rating'] ?? 0.0,
+              'comment': data['comment'],
+              'timestamp': data['timestamp'],
+            };
+          }).toList();
+        });
   }
 
   // Get trending services (sorted by average rating)
   Future<List<Map<String, dynamic>>> getTrendingServices(
-      List<int> serviceIds) async {
+    List<int> serviceIds,
+  ) async {
     List<Map<String, dynamic>> servicesWithRatings = [];
 
     for (int serviceId in serviceIds) {
@@ -96,7 +89,9 @@ class RatingService {
 
     // Sort by average rating (highest first)
     servicesWithRatings.sort(
-        (a, b) => (b['averageRating'] as num).compareTo(a['averageRating'] as num));
+      (a, b) =>
+          (b['averageRating'] as num).compareTo(a['averageRating'] as num),
+    );
 
     return servicesWithRatings;
   }
@@ -108,7 +103,9 @@ class RatingService {
 
   // Get user's rating statistics for a specific service
   Future<Map<String, dynamic>> getUserServiceRating(
-      String userId, int serviceId) async {
+    String userId,
+    int serviceId,
+  ) async {
     final snapshot = await _firestore
         .collection('ratings')
         .where('userId', isEqualTo: userId)
@@ -152,7 +149,7 @@ class RatingService {
         .get();
 
     if (snapshot.docs.isEmpty) return null;
-    
+
     return snapshot.docs.first.data()['rating'];
   }
 }

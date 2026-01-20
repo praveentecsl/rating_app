@@ -102,7 +102,10 @@ class DatabaseHelper {
     );
 
     if (results.isNotEmpty) {
-      return User.fromMap(results.first, userId: results.first['user_id']?.toString());
+      return User.fromMap(
+        results.first,
+        userId: results.first['user_id']?.toString(),
+      );
     }
     return null;
   }
@@ -130,7 +133,10 @@ class DatabaseHelper {
     );
 
     if (results.isNotEmpty) {
-      return User.fromMap(results.first, userId: results.first['user_id']?.toString());
+      return User.fromMap(
+        results.first,
+        userId: results.first['user_id']?.toString(),
+      );
     }
     return null;
   }
@@ -138,15 +144,12 @@ class DatabaseHelper {
   Future<String> insertOrUpdateUser(User user) async {
     final db = await database;
     final existing = await getUserByUniversityId(user.universityId);
-    
+
     if (existing != null) {
       // Update existing user
       await db.update(
         'Users',
-        {
-          'name': user.name,
-          'role': user.role,
-        },
+        {'name': user.name, 'role': user.role},
         where: 'user_id = ?',
         whereArgs: [existing.userId],
       );
