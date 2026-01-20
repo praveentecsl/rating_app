@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../db/database_helper.dart';
+import '../services/firestore_service.dart';
 import '../models/user.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -12,9 +12,8 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
-  List<Map<String, dynamic>> _userRatings = [];
-  Map<String, dynamic> _contributionStats = {};
+  final FirestoreService _firestoreService = FirestoreService();
+  Map<String, dynamic> _userRatingStats = {};
   bool _isLoading = true;
 
   @override
@@ -27,16 +26,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final ratings = await _dbHelper.getUserRatingsWithDetails(
-        widget.user.userId!,
-      );
-      final stats = await _dbHelper.getUserContributionStats(
+      final stats = await _firestoreService.getUserRatingStats(
         widget.user.userId!,
       );
 
       setState(() {
-        _userRatings = ratings;
-        _contributionStats = stats;
+        _userRatingStats = stats;
         _isLoading = false;
       });
     } catch (e) {
@@ -146,8 +141,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildContributionStatsCard() {
-    final totalRatings = _contributionStats['total_ratings'] ?? 0;
-    final avgScore = _contributionStats['average_score'] ?? 0.0;
+    final totalRatings = _userRatingStats['totalRatings'] ?? 0;
+    final avgScore = _userRatingStats['averageScore'] ?? 0.0;
 
     return Card(
       elevation: 4,
@@ -165,7 +160,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
                 const SizedBox(width: 8),
                 const Text(
-                  'My Contribution to Common Rating Pool',
+                  'My Contribution Statistics',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -182,7 +177,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
                 _buildStatItem(
                   'Average Score',
-                  avgScore.toStringAsFixed(1),
+                  avgScore.toStringAsFixed(1) + '/10',
                   Icons.star,
                   Colors.amber,
                 ),
@@ -228,6 +223,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildMyRatingsSection() {
+    final ratings = _userRatingStats['ratings'] as List<dynamic>? ?? [];
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -246,7 +243,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        if (_userRatings.isEmpty)
+        if (ratings.isEmpty)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(32.0),
@@ -278,9 +275,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _userRatings.length,
+            itemCount: ratings.length,
             itemBuilder: (context, index) {
-              final rating = _userRatings[index];
+              final rating = ratings[index] as Map<String, dynamic>;
               return _buildRatingCard(rating);
             },
           ),
@@ -290,10 +287,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Widget _buildRatingCard(Map<String, dynamic> rating) {
     final score = rating['score'] as int;
-    final serviceName = rating['service_name'] as String;
-    final subserviceName = rating['subservice_name'] as String;
+    final subserviceId = rating['subserviceId'] as int;
     final comment = rating['comment'] as String?;
-    final timestamp = rating['timestamp'] as String;
+    final timestamp = rating['timestamp'] as String?;
 
     Color scoreColor;
     if (score >= 8) {
@@ -315,21 +311,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        serviceName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        subserviceName,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                    ],
+                  child: Text(
+                    'Subservice ID: $subserviceId',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 Container(
@@ -347,7 +334,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       const Icon(Icons.star, color: Colors.white, size: 18),
                       const SizedBox(width: 4),
                       Text(
-                        score.toString(),
+                        '$score/10',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -370,11 +357,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 child: Text(comment, style: const TextStyle(fontSize: 14)),
               ),
             ],
-            const SizedBox(height: 8),
-            Text(
-              _formatTimestamp(timestamp),
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-            ),
+            if (timestamp != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Rated on: $timestamp',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ],
           ],
         ),
       ),

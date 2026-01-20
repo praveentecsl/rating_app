@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import '../db/database_helper.dart';
-import '../models/rating.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
   final int serviceId;
@@ -15,13 +15,8 @@ class ServiceDetailScreen extends StatefulWidget {
 class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   final Map<String, double> _ratings = {}; // criteriaName -> rating value
   bool _isSaving = false;
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final AuthService _authService = AuthService();
-
-  // Rating pool data
-  Map<String, dynamic> _commonPoolStats = {};
-  Map<String, dynamic> _userContribution = {};
-  bool _isLoadingStats = true;
+  final FirestoreService _firestoreService = FirestoreService();
 
   // Hardcoded services and sub-services data
   static final Map<int, Map<String, dynamic>> _servicesData = {
@@ -223,34 +218,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   void initState() {
     super.initState();
     _initializeRatings();
-    _loadRatingStats();
-  }
-
-  Future<void> _loadRatingStats() async {
-    setState(() => _isLoadingStats = true);
-
-    try {
-      final user = await _authService.getCurrentUserData();
-      if (user == null || user.userId == null) return;
-
-      // Load common pool statistics (overall service rating)
-      final commonStats = await _dbHelper.getServiceStats(widget.serviceId);
-      
-      // Load user's contribution to this service
-      final userStats = await _dbHelper.getUserServiceRating(
-        user.userId!,
-        widget.serviceId,
-      );
-
-      setState(() {
-        _commonPoolStats = commonStats;
-        _userContribution = userStats;
-        _isLoadingStats = false;
-      });
-    } catch (e) {
-      print('Error loading rating stats: $e');
-      setState(() => _isLoadingStats = false);
-    }
   }
 
   void _initializeRatings() {
@@ -264,9 +231,23 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   }
 
   Future<void> _saveAllRatings() async {
+    print('DEBUG: Save ratings button clicked');
     try {
-      final user = await _authService.getCurrentUserData();
+      print('DEBUG: Getting current user...');
+      
+      // Add timeout to prevent hanging
+      final user = await _authService.getCurrentUserData().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('DEBUG: getCurrentUserData timed out');
+          return null;
+        },
+      );
+      
+      print('DEBUG: User retrieved - userId: ${user?.userId}, name: ${user?.name}');
+      
       if (user == null || user.userId == null) {
+        print('DEBUG: User not logged in or userId is null');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -277,6 +258,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             ),
           );
         }
+        setState(() => _isSaving = false);
         return;
       }
 
@@ -286,39 +268,58 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
 
       final serviceData = _servicesData[widget.serviceId];
       if (serviceData == null) {
+        print('DEBUG: Service data not found for serviceId: ${widget.serviceId}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Service data not found!')),
           );
         }
+        setState(() => _isSaving = false);
         return;
       }
       final subServices =
           serviceData['subServices'] as List<Map<String, dynamic>>;
+      
+      print('DEBUG: Found ${subServices.length} subservices');
+      print('DEBUG: Ratings to save: $_ratings');
 
       for (var entry in _ratings.entries) {
         final subserviceName = entry.key;
         final score = entry.value.round();
 
         // Find the subservice ID from its name
-        final subservice = subServices.firstWhere(
-          (s) => s['name'] == subserviceName,
-          orElse: () => {},
-        );
-
-        if (subservice.isEmpty) {
-          print('Could not find subservice with name: $subserviceName');
+        Map<String, dynamic>? subservice;
+        try {
+          subservice = subServices.firstWhere(
+            (s) => s['name'] == subserviceName,
+          );
+        } catch (e) {
+          print('DEBUG: Could not find subservice with name: $subserviceName');
           continue; // Skip if not found
         }
 
-        final rating = Rating(
-          userId: user.userId!,
-          subserviceId: subservice['id'], // Use the correct integer ID
-          score: score,
-        );
+        if (subservice == null || subservice.isEmpty) {
+          print('DEBUG: Could not find subservice with name: $subserviceName');
+          continue; // Skip if not found
+        }
 
-        await _dbHelper.insertRating(rating);
+        print('DEBUG: Saving rating - subservice: $subserviceName (id: ${subservice['id']}), score: $score');
+
+        try {
+          // Save directly to Firestore
+          await _firestoreService.submitRating(
+            userId: user.userId!,
+            subserviceId: subservice['id'],
+            score: score,
+          );
+          print('DEBUG: Rating saved successfully to Firestore');
+        } catch (e) {
+          print('DEBUG: Error saving rating: $e');
+          rethrow;
+        }
       }
+
+      print('DEBUG: All ratings saved, showing success message');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -340,8 +341,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           Navigator.of(context).pop(true);
         }
       }
-    } catch (e) {
-      print('Error saving ratings: $e');
+    } catch (e, stackTrace) {
+      print('DEBUG: Error saving ratings: $e');
+      print('DEBUG: Stack trace: $stackTrace');
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -368,296 +370,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     if (rating >= 5) return 'Average';
     if (rating >= 3) return 'Below Average';
     return 'Poor';
-  }
-
-  Widget _buildRatingPoolsCard() {
-    final commonAvg = (_commonPoolStats['average_score'] ?? 0.0) as num;
-    final totalRatings = (_commonPoolStats['total_ratings'] ?? 0) as int;
-    final userRatingsGiven = (_userContribution['ratings_given'] ?? 0) as int;
-    final userAvg = _userContribution['user_average'];
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.indigo.shade50, Colors.blue.shade50],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.indigo.shade200, width: 2),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.pool, color: Colors.indigo.shade700, size: 28),
-                const SizedBox(width: 8),
-                const Text(
-                  'Rating Pools',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Common Rating Pool
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.groups, color: Colors.blue.shade700, size: 24),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Common Pool (All Users)',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Average Score',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.star,
-                                color: _getRatingColor(commonAvg.toDouble()),
-                                size: 24,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                commonAvg.toStringAsFixed(1),
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: _getRatingColor(commonAvg.toDouble()),
-                                ),
-                              ),
-                              Text(
-                                '/10',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              totalRatings.toString(),
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const Text(
-                              'Total Ratings',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Personal Contribution Pool
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.person,
-                        color: Colors.green.shade700,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'My Contribution',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (userRatingsGiven > 0 && userAvg != null)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'My Average',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.star,
-                                  color: _getRatingColor(
-                                    userAvg.toDouble(),
-                                  ),
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  userAvg.toStringAsFixed(1),
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: _getRatingColor(
-                                      userAvg.toDouble(),
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  '/10',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                userRatingsGiven.toString(),
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const Text(
-                                'My Ratings',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Text(
-                      'No ratings yet - Start rating to contribute!',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Info message
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.amber.shade200),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.amber.shade900,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Your ratings contribute to the common pool and help identify issues quickly. Sudden drops in ratings alert authorities to take immediate action.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.amber.shade900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -701,9 +413,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
               ],
             ),
           ),
-
-          // Rating Pools Display
-          if (!_isLoadingStats) _buildRatingPoolsCard(),
 
           // Instructions
           Container(

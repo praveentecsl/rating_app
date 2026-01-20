@@ -12,7 +12,9 @@ class AuthService {
 
   // Get current user data from Firestore
   Future<app_models.User?> getCurrentUserData() async {
+    print('DEBUG AuthService: Getting current user data');
     final firebaseUser = _firebaseAuth.currentUser;
+    print('DEBUG AuthService: Firebase user: ${firebaseUser?.uid}');
     if (firebaseUser == null) return null;
     return await getUserData(firebaseUser.uid);
   }
@@ -123,11 +125,14 @@ class AuthService {
   // Get user data from Firestore and sync with local database
   Future<app_models.User?> getUserData(String uid) async {
     try {
+      print('DEBUG AuthService: Fetching user from Firestore...');
       final doc = await _firestore.collection('users').doc(uid).get();
+      print('DEBUG AuthService: Firestore doc exists: ${doc.exists}');
       
       if (doc.exists) {
         final data = doc.data()!;
         final universityId = data['universityId'] ?? '';
+        print('DEBUG AuthService: User data from Firestore: name=${data['name']}, universityId=$universityId');
         
         // Create user object from Firestore data
         final firestoreUser = app_models.User(
@@ -137,9 +142,17 @@ class AuthService {
           password: 'firebase_auth', // Placeholder for Firebase users
         );
         
+        print('DEBUG AuthService: Syncing with local database...');
         // Sync with local database and get user with userId
         final dbHelper = DatabaseHelper.instance;
-        final localUserId = await dbHelper.insertOrUpdateUser(firestoreUser);
+        final localUserId = await dbHelper.insertOrUpdateUser(firestoreUser).timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            print('DEBUG AuthService: Database sync timed out, using UID hash as userId');
+            return uid.hashCode.abs(); // Use hash of UID as fallback
+          },
+        );
+        print('DEBUG AuthService: Local user ID: $localUserId');
         
         // Return user with local database ID
         return app_models.User(
@@ -150,9 +163,11 @@ class AuthService {
           password: '', // Don't store password in the app
         );
       }
+      print('DEBUG AuthService: User document does not exist');
       return null;
-    } catch (e) {
-      print('Error getting user data: $e');
+    } catch (e, stackTrace) {
+      print('DEBUG AuthService: Error getting user data: $e');
+      print('DEBUG AuthService: Stack trace: $stackTrace');
       return null;
     }
   }

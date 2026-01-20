@@ -162,4 +162,100 @@ class FirestoreService {
       return 0.0;
     }
   }
+
+  // Get service statistics by aggregating all its subservices
+  // subserviceIds are the IDs of all subservices belonging to the service
+  Future<Map<String, dynamic>> getServiceStats(List<int> subserviceIds) async {
+    try {
+      if (subserviceIds.isEmpty) {
+        return {
+          'total_ratings': 0,
+          'average_score': 0.0,
+        };
+      }
+
+      // Get all ratings for all subservices of this service
+      final snapshot = await _firestore
+          .collection('ratings')
+          .where('subserviceId', whereIn: subserviceIds)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return {
+          'total_ratings': 0,
+          'average_score': 0.0,
+        };
+      }
+
+      // Calculate average score across all ratings
+      double totalScore = 0;
+      Set<int> uniqueUsers = {};
+      
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        totalScore += (data['score'] ?? 0);
+        uniqueUsers.add(data['userId'] ?? 0);
+      }
+
+      double averageScore = totalScore / snapshot.docs.length;
+
+      return {
+        'total_ratings': uniqueUsers.length,
+        'average_score': averageScore,
+      };
+    } catch (e) {
+      print('Error getting service stats: $e');
+      return {
+        'total_ratings': 0,
+        'average_score': 0.0,
+      };
+    }
+  }
+
+  // Get user's rating history/contributions
+  Future<Map<String, dynamic>> getUserRatingStats(int userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('ratings')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return {
+          'totalRatings': 0,
+          'averageScore': 0.0,
+          'ratings': [],
+        };
+      }
+
+      double totalScore = 0;
+      List<Map<String, dynamic>> ratings = [];
+      
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        totalScore += (data['score'] ?? 0);
+        ratings.add({
+          'subserviceId': data['subserviceId'],
+          'score': data['score'],
+          'timestamp': data['timestamp'],
+          'comment': data['comment'],
+        });
+      }
+
+      double averageScore = totalScore / snapshot.docs.length;
+
+      return {
+        'totalRatings': snapshot.docs.length,
+        'averageScore': averageScore,
+        'ratings': ratings,
+      };
+    } catch (e) {
+      print('Error getting user rating stats: $e');
+      return {
+        'totalRatings': 0,
+        'averageScore': 0.0,
+        'ratings': [],
+      };
+    }
+  }
 }
